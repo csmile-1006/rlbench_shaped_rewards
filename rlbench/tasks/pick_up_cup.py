@@ -6,7 +6,6 @@ from rlbench.const import colors
 from rlbench.backend.task import Task
 from rlbench.backend.conditions import (
     DetectedCondition,
-    NothingGrasped,
     GraspedCondition,
 )
 from rlbench.backend.spawn_boundary import SpawnBoundary
@@ -23,9 +22,7 @@ class PickUpCup(Task):
         self.register_graspable_objects([self.cup1, self.cup2])
 
         self._grasped_cond = GraspedCondition(self.robot.gripper, self.cup1)
-        self._detected_cond = DetectedCondition(
-            self.cup1, self.success_sensor, negated=True
-        )
+        self._detected_cond = DetectedCondition(self.cup1, self.success_sensor, negated=True)
 
         self.register_success_conditions([self._detected_cond, self._grasped_cond])
 
@@ -59,22 +56,22 @@ class PickUpCup(Task):
 
         if not grasped:
             grasp_cup1_reward = np.exp(
-                -np.linalg.norm(
-                    self.cup1.get_position() - self.robot.arm.get_tip().get_position()
-                )
+                -np.linalg.norm(self.cup1.get_position() - self.robot.arm.get_tip().get_position())
             )
             reward = grasp_cup1_reward
         else:
-            lift_cup1_reward = np.exp(
-                -np.linalg.norm(
-                    self.cup1.get_position() - self.success_sensor.get_position()
-                )
-            )
+            lift_cup1_reward = np.exp(-np.linalg.norm(self.cup1.get_position() - self.success_sensor.get_position()))
             reward = 1.0 + lift_cup1_reward
         return reward
+
+    def skill(self) -> int:
+        grasped = self._grasped_cond.condition_met()[0]
+        detected = self._detected_cond.condition_met()[0]
+        return int(grasped) + int(detected)
 
     def get_low_dim_state(self) -> np.ndarray:
         # For ad-hoc reward computation, attach reward
         reward = self.reward()
+        skill = self.skill()
         state = super().get_low_dim_state()
-        return np.hstack([reward, state])
+        return np.hstack([reward, skill, state])

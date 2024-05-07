@@ -7,7 +7,6 @@ from rlbench.backend.task import Task
 from rlbench.backend.conditions import (
     DetectedCondition,
     GraspedCondition,
-    NothingGrasped,
 )
 
 
@@ -42,26 +41,29 @@ class StackWine(Task):
         grasped = self._grasped_cond.condition_met()[0]
         if not grasped:
             grasp_wine_reward = np.exp(
-                -np.linalg.norm(
-                    self.wine_bottle.get_position()
-                    - self.robot.arm.get_tip().get_position()
-                )
+                -np.linalg.norm(self.wine_bottle.get_position() - self.robot.arm.get_tip().get_position())
             )
             reach_target_reward = 0.0
         else:
             grasp_wine_reward = 1.0
             reach_target_reward = np.exp(
-                -np.linalg.norm(
-                    self.wine_bottle.get_position()
-                    - self._success_sensor.get_position()
-                )
+                -np.linalg.norm(self.wine_bottle.get_position() - self._success_sensor.get_position())
             )
         reward = grasp_wine_reward + reach_target_reward
 
         return reward
 
+    def skill(self) -> int:
+        grasped = self._grasped_cond.condition_met()[0]
+        detected = self._detected_cond.condition_met()[0]
+        if detected:
+            return int(detected) + 1
+        else:
+            return int(grasped) + int(detected)
+
     def get_low_dim_state(self) -> np.ndarray:
         # For ad-hoc reward computation, attach reward
         reward = self.reward()
+        skill = self.skill()
         state = super().get_low_dim_state()
-        return np.hstack([reward, state])
+        return np.hstack([reward, skill, state])

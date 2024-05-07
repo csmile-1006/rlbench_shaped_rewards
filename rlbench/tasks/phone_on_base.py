@@ -21,9 +21,7 @@ class PhoneOnBase(Task):
         self._nothing_grapsed_cond = NothingGrasped(self.robot.gripper)
         self._phone_cond = DetectedCondition(self.phone, self.success_detector)
 
-        self.register_success_conditions(
-            [self._phone_cond, NothingGrasped(self.robot.gripper)]
-        )
+        self.register_success_conditions([self._phone_cond, NothingGrasped(self.robot.gripper)])
 
     def init_episode(self, index: int) -> List[str]:
         return [
@@ -54,25 +52,34 @@ class PhoneOnBase(Task):
             if not grasped:
                 # reaching the phone
                 grasp_phone_reward = np.exp(
-                    -np.linalg.norm(
-                        self.phone.get_position()
-                        - self.robot.arm.get_tip().get_position()
-                    )
+                    -np.linalg.norm(self.phone.get_position() - self.robot.arm.get_tip().get_position())
                 )
                 reward = grasp_phone_reward
             else:
                 # moving the phone toward base
                 move_phone_reward = np.exp(
-                    -np.linalg.norm(
-                        self.phone.get_position() - self.success_detector.get_position()
-                    )
+                    -np.linalg.norm(self.phone.get_position() - self.success_detector.get_position())
                 )
                 reward = 1.0 + move_phone_reward
 
         return reward
 
+    def skill(self) -> int:
+        grasped = self._grasped_cond.condition_met()[0]
+        not_grasped = self._nothing_grapsed_cond.condition_met()[0]
+        phone_on_base = self._phone_cond.condition_met()[0]
+        if phone_on_base and not_grasped:
+            return 3
+        if phone_on_base and grasped:
+            return 2
+        if not phone_on_base and not_grasped:
+            return 0
+        if not phone_on_base and grasped:
+            return 1
+
     def get_low_dim_state(self) -> np.ndarray:
         # For ad-hoc reward computation, attach reward
         reward = self.reward()
+        skill = self.skill()
         state = super().get_low_dim_state()
-        return np.hstack([reward, state])
+        return np.hstack([reward, skill, state])

@@ -12,9 +12,7 @@ class PutRubbishInBin(Task):
         self.success_sensor = ProximitySensor("success")
         self.rubbish = Shape("rubbish")
         self.register_graspable_objects([self.rubbish])
-        self.register_success_conditions(
-            [DetectedCondition(self.rubbish, self.success_sensor)]
-        )
+        self.register_success_conditions([DetectedCondition(self.rubbish, self.success_sensor)])
         self._grasped_cond = GraspedCondition(self.robot.gripper, self.rubbish)
         self._detected_cond = DetectedCondition(self.rubbish, self.success_sensor)
         self.Z_TARGET = 1.0
@@ -58,16 +56,11 @@ class PutRubbishInBin(Task):
                 reward = 4.0
             else:
                 grasp_rubbish_reward = np.exp(
-                    -np.linalg.norm(
-                        self.rubbish.get_position()
-                        - self.robot.arm.get_tip().get_position()
-                    )
+                    -np.linalg.norm(self.rubbish.get_position() - self.robot.arm.get_tip().get_position())
                 )
                 reward = grasp_rubbish_reward
         else:
-            lift_rubbish_reward = np.exp(
-                -np.linalg.norm(self.rubbish.get_position() - self.target1_pos)
-            )
+            lift_rubbish_reward = np.exp(-np.linalg.norm(self.rubbish.get_position() - self.target1_pos))
 
             # TODO: Add more formal condition for reaching
             if not self.lifted and lift_rubbish_reward > 0.9:
@@ -75,9 +68,7 @@ class PutRubbishInBin(Task):
 
             if self.lifted:
                 lift_rubbish_reward = 1.0
-                reach_target_reward = np.exp(
-                    -np.linalg.norm(self.rubbish.get_position() - self.target2_pos)
-                )
+                reach_target_reward = np.exp(-np.linalg.norm(self.rubbish.get_position() - self.target2_pos))
             else:
                 reach_target_reward = 0.0
 
@@ -87,8 +78,18 @@ class PutRubbishInBin(Task):
 
         return reward
 
+    def skill(self) -> int:
+        grasped = self._grasped_cond.condition_met()[0]
+        lifted = self.lifted
+        detected = self._detected_cond.condition_met()[0]
+        if detected:
+            return lifted + detected + 1
+        else:
+            return int(grasped) + int(lifted) + int(detected)
+
     def get_low_dim_state(self) -> np.ndarray:
         # For ad-hoc reward computation, attach reward
         reward = self.reward()
+        skill = self.skill()
         state = super().get_low_dim_state()
-        return np.hstack([reward, state])
+        return np.hstack([reward, skill, state])

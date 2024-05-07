@@ -1,7 +1,6 @@
 from typing import List
 import numpy as np
 import copy
-from scipy.spatial.transform import Rotation
 from pyrep.objects.shape import Shape
 from pyrep.objects.proximity_sensor import ProximitySensor
 from rlbench.backend.task import Task
@@ -14,9 +13,7 @@ class TakeUmbrellaOutOfUmbrellaStand(Task):
         self.umbrella = Shape("umbrella")
         self.register_graspable_objects([self.umbrella])
         self._grasped_cond = GraspedCondition(self.robot.gripper, self.umbrella)
-        self._detected_cond = DetectedCondition(
-            self.umbrella, self.success_sensor, negated=True
-        )
+        self._detected_cond = DetectedCondition(self.umbrella, self.success_sensor, negated=True)
         self.register_success_conditions([self._detected_cond])
         self.Z_TARGET = 1.12
 
@@ -40,22 +37,23 @@ class TakeUmbrellaOutOfUmbrellaStand(Task):
 
         if not grasped:
             grasp_umbrella_reward = np.exp(
-                -np.linalg.norm(
-                    self.umbrella.get_position()
-                    - self.robot.arm.get_tip().get_position()
-                )
+                -np.linalg.norm(self.umbrella.get_position() - self.robot.arm.get_tip().get_position())
             )
             reward = grasp_umbrella_reward
         else:
-            lift_umbrella_reward = np.exp(
-                -np.linalg.norm(self.umbrella.get_position() - self.target_pos)
-            )
+            lift_umbrella_reward = np.exp(-np.linalg.norm(self.umbrella.get_position() - self.target_pos))
             reward = 1.0 + lift_umbrella_reward
 
         return reward
 
+    def skill(self) -> int:
+        grasped = self._grasped_cond.condition_met()[0]
+        detected = self._detected_cond.condition_met()[0]
+        return int(grasped) + int(detected)
+
     def get_low_dim_state(self) -> np.ndarray:
         # For ad-hoc reward computation, attach reward
         reward = self.reward()
+        skill = self.skill()
         state = super().get_low_dim_state()
-        return np.hstack([reward, state])
+        return np.hstack([reward, skill, state])

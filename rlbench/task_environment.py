@@ -55,9 +55,7 @@ class TaskEnvironment(object):
 
         self._scene.load(self._task)
         self._pyrep.start()
-        self._robot_shapes = self._robot.arm.get_objects_in_tree(
-            object_type=ObjectType.SHAPE
-        )
+        self._robot_shapes = self._robot.arm.get_objects_in_tree(object_type=ObjectType.SHAPE)
         self._default_texture = default_texture
 
     def get_name(self) -> str:
@@ -70,8 +68,7 @@ class TaskEnvironment(object):
     def set_variation(self, v: int) -> None:
         if v >= self.variation_count():
             raise TaskEnvironmentError(
-                "Requested variation %d, but there are only %d variations."
-                % (v, self.variation_count())
+                "Requested variation %d, but there are only %d variations." % (v, self.variation_count())
             )
         self._variation_number = v
 
@@ -113,7 +110,12 @@ class TaskEnvironment(object):
                     "User requested shaped rewards, but task %s does not have "
                     "a defined reward() function." % self._task.get_name()
                 )
-        return self._scene.get_observation(self._default_texture), reward, terminate
+            skill = self._task.skill()
+        else:
+            # Have to call reward function for computing pre-conditions (e.g., put_rubbish_in_bin)
+            self._task.reward()
+            skill = self._task.skill()
+        return self._scene.get_observation(self._default_texture), reward, skill, terminate
 
     def get_demos(
         self,
@@ -128,18 +130,12 @@ class TaskEnvironment(object):
     ) -> List[Demo]:
         """Negative means all demos"""
 
-        if not live_demos and (
-            self._dataset_root is None or len(self._dataset_root) == 0
-        ):
-            raise RuntimeError(
-                "Can't ask for a stored demo when no dataset root provided."
-            )
+        if not live_demos and (self._dataset_root is None or len(self._dataset_root) == 0):
+            raise RuntimeError("Can't ask for a stored demo when no dataset root provided.")
 
         if not live_demos:
             if self._dataset_root is None or len(self._dataset_root) == 0:
-                raise RuntimeError(
-                    "Can't ask for stored demo when no dataset root provided."
-                )
+                raise RuntimeError("Can't ask for stored demo when no dataset root provided.")
             demos = utils.get_stored_demos(
                 amount,
                 image_paths,
@@ -188,9 +184,7 @@ class TaskEnvironment(object):
                     attempts -= 1
                     logging.info("Bad demo. " + str(e))
             if attempts <= 0:
-                raise RuntimeError(
-                    "Could not collect demos. Maybe a problem with the task?"
-                )
+                raise RuntimeError("Could not collect demos. Maybe a problem with the task?")
         return demos, demos_randomize
 
     def reset_to_demo(self, demo: Demo) -> (List[str], Observation):
