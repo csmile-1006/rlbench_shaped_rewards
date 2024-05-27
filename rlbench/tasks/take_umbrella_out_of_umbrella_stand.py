@@ -14,7 +14,7 @@ class TakeUmbrellaOutOfUmbrellaStand(Task):
         self.register_graspable_objects([self.umbrella])
         self._grasped_cond = GraspedCondition(self.robot.gripper, self.umbrella)
         self._detected_cond = DetectedCondition(self.umbrella, self.success_sensor, negated=True)
-        self.register_success_conditions([self._detected_cond, self._grasped_cond])
+        self.register_success_conditions([self._detected_cond])
         self.Z_TARGET = 1.12
 
     def init_episode(self, index: int) -> List[str]:
