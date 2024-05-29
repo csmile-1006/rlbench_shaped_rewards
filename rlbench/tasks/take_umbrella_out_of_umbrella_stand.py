@@ -52,7 +52,7 @@ class TakeUmbrellaOutOfUmbrellaStand(Task):
             detected = int(self._detected_cond.condition_met()[0])
             return 1 + detected
         else:
-            grasped
+            return grasped
 
     def get_low_dim_state(self) -> np.ndarray:
         # For ad-hoc reward computation, attach reward
