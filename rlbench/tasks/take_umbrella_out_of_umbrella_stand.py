@@ -47,9 +47,12 @@ class TakeUmbrellaOutOfUmbrellaStand(Task):
         return reward
 
     def skill(self) -> int:
-        grasped = self._grasped_cond.condition_met()[0]
-        detected = self._detected_cond.condition_met()[0]
-        return int(grasped) + int(detected)
+        grasped = int(self._grasped_cond.condition_met()[0])
+        if grasped:
+            detected = int(self._detected_cond.condition_met()[0])
+            return 1 + detected
+        else:
+            grasped
 
     def get_low_dim_state(self) -> np.ndarray:
         # For ad-hoc reward computation, attach reward
